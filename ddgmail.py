@@ -36,8 +36,8 @@ def load_config():
     config = None
 
     if os.path.exists(config_file):
-        with open(config_file) as f:
-            config = json.load(f)
+        with open(config_file, encoding='utf-8') as fobj:
+            config = json.load(fobj)
 
     if (
         not config
@@ -51,8 +51,8 @@ def load_config():
 
 
 def save_config(config):
-    with open(config_file, "w") as f:
-        json.dump(config, f)
+    with open(config_file, "w", encoding='utf-8') as fobj:
+        json.dump(config, fobj)
 
 
 @click.group()
@@ -71,7 +71,8 @@ def request_otp(username):
 
 @cli.command()
 @click.argument("username")
-def login(username, otp=None):
+@click.pass_context
+def login(ctx: click.Context, username, otp=None, tries=0):
     """Login to the account with OTP"""
     while not otp:
         otp = click.prompt("Enter the magic password", type=str)
@@ -80,7 +81,16 @@ def login(username, otp=None):
     response = session.get(
         BASE_URL + "auth/login", params={"user": username, "otp": otp}
     )
-    response.raise_for_status()
+    try:
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 401:
+            if tries < 3:
+                click.echo("Invalid magic password", err=True)
+                ctx.invoke(login, username=username, otp=None, tries=tries + 1)
+                return
+            raise click.ClickException("Retry threshold exceeded")
+        raise e
     data = response.json()
     if data["status"] != "authenticated":
         raise click.ClickException("Login failed")
@@ -99,13 +109,21 @@ def login(username, otp=None):
 
 
 @cli.command()
-def dashboard():
+@click.pass_context
+def dashboard(ctx: click.Context, tries=0):
     """Show dashboard information"""
     config = load_config()
     response = session.get(
         BASE_URL + "email/dashboard",
         headers={"Authorization": f"Bearer {config['token']}"},
     )
+    if response.status_code == 401:
+        if tries < 3:
+            ctx.invoke(request_otp, username=config["user"])
+            ctx.invoke(login, username=config["user"], otp=None)
+            ctx.invoke(dashboard, tries=tries + 1)
+            return
+        raise click.ClickException("Retry threshold exceeded")
     response.raise_for_status()
     data = response.json()
     mapping = {
@@ -125,7 +143,8 @@ def dashboard():
 
 @cli.command()
 @click.argument("email")
-def change_forwarding_email(email):
+@click.pass_context
+def change_forwarding_email(ctx: click.Context, email, tries = 0):
     """Change forwarding email"""
     config = load_config()
     data = {"email": email, "disable_secure_reply": 0}
@@ -134,6 +153,13 @@ def change_forwarding_email(email):
         headers={"Authorization": f"Bearer {config['token']}"},
         data=data,
     )
+    if response.status_code == 401:
+        if tries < 3:
+            ctx.invoke(request_otp, username=config["user"])
+            ctx.invoke(login, username=config["user"], otp=None)
+            ctx.invoke(change_forwarding_email, email=email, tries=tries + 1)
+            return
+        raise click.ClickException("Retry threshold exceeded")
     response.raise_for_status()
     click.echo("Forwarding email changed")
 
