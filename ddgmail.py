@@ -151,7 +151,7 @@ def generate_new_alias():
     if sys.stdout.isatty():
         click.echo(f"Generated E-Mail Address: {data['address']}@duck.com")
     else:
-        click.echo(data["address"])
+        click.echo(f"{data['address']}@duck.com")
 
 
 if __name__ == "__main__":
