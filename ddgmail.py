@@ -108,8 +108,8 @@ def login(ctx: click.Context, username, otp=None, tries=0):
     click.echo("Login successful")
 
 
-def row_string_fmt(row1: str, row2: str, size: int):
-    return f"{row1:>{size}} | {row2:<{size}}"
+def row_string_fmt(str1: str, str2: str, size: int):
+    return f"{str1:>{size}} | {str2}"
 
 
 @cli.command()
