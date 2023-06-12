@@ -83,14 +83,14 @@ def login(ctx: click.Context, username, otp=None, tries=0):
     )
     try:
         response.raise_for_status()
-    except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 401:
-            if tries < 3:
-                click.echo("Invalid magic password", err=True)
-                ctx.invoke(login, username=username, otp=None, tries=tries + 1)
-                return
+    except requests.exceptions.HTTPError as ex:
+        if ex.response.status_code != 401:
+            raise ex
+        if tries >= 3:
             raise click.ClickException("Retry threshold exceeded")
-        raise e
+        click.echo("Invalid magic password", err=True)
+        ctx.invoke(login, username=username, otp=None, tries=tries + 1)
+        return
     data = response.json()
     if data["status"] != "authenticated":
         raise click.ClickException("Login failed")
@@ -123,15 +123,15 @@ def dashboard(ctx: click.Context, tries=0):
     )
     try:
         response.raise_for_status()
-    except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 401:
-            if tries < 3:
-                ctx.invoke(request_otp, username=config["user"])
-                ctx.invoke(login, username=config["user"], otp=None)
-                ctx.invoke(dashboard, tries=tries + 1)
-                return
+    except requests.exceptions.HTTPError as ex:
+        if ex.response.status_code != 401:
+            raise ex
+        if tries >= 3:
             raise click.ClickException("Retry threshold exceeded")
-        raise e
+        ctx.invoke(request_otp, username=config["user"])
+        ctx.invoke(login, username=config["user"], otp=None)
+        ctx.invoke(dashboard, tries=tries + 1)
+        return
     data = response.json()
     click.echo(row_string_fmt("Duck Address", f"{config['user']}@duck.com", 20))
     click.echo(row_string_fmt("Forwarding Address", data["user"]["email"], 20))
@@ -154,15 +154,15 @@ def change_forwarding_email(ctx: click.Context, email, tries=0):
     )
     try:
         response.raise_for_status()
-    except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 401:
-            if tries < 3:
-                ctx.invoke(request_otp, username=config["user"])
-                ctx.invoke(login, username=config["user"], otp=None)
-                ctx.invoke(change_forwarding_email, email=email, tries=tries + 1)
-                return
+    except requests.exceptions.HTTPError as ex:
+        if ex.response.status_code != 401:
+            raise ex
+        if tries >= 3:
             raise click.ClickException("Retry threshold exceeded")
-        raise e
+        ctx.invoke(request_otp, username=config["user"])
+        ctx.invoke(login, username=config["user"], otp=None)
+        ctx.invoke(change_forwarding_email, email=email, tries=tries + 1)
+        return
     click.echo("Forwarding email changed")
 
 
