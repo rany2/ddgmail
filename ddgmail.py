@@ -12,7 +12,7 @@ BASE_HEADERS = {
     "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/114.0",
     "Accept": "*/*",
     "Accept-Language": "en-US,en;q=0.5",
-#    "Accept-Encoding": "gzip, deflate, br",
+    # "Accept-Encoding": "gzip, deflate, br",
     "Referer": "https://duckduckgo.com/",
     "DNT": "1",
     "Connection": "keep-alive",
@@ -36,7 +36,7 @@ def load_config():
     config = None
 
     if os.path.exists(config_file):
-        with open(config_file, encoding='utf-8') as fobj:
+        with open(config_file, encoding="utf-8") as fobj:
             config = json.load(fobj)
 
     if (
@@ -51,7 +51,7 @@ def load_config():
 
 
 def save_config(config):
-    with open(config_file, "w", encoding='utf-8') as fobj:
+    with open(config_file, "w", encoding="utf-8") as fobj:
         json.dump(config, fobj)
 
 
@@ -108,6 +108,10 @@ def login(ctx: click.Context, username, otp=None, tries=0):
     click.echo("Login successful")
 
 
+def row_string_fmt(row1: str, row2: str, size: int):
+    return f"{row1:>{size}} | {row2:<{size}}"
+
+
 @cli.command()
 @click.pass_context
 def dashboard(ctx: click.Context, tries=0):
@@ -126,25 +130,17 @@ def dashboard(ctx: click.Context, tries=0):
         raise click.ClickException("Retry threshold exceeded")
     response.raise_for_status()
     data = response.json()
-    mapping = {
-        "stats": {
-            "addresses_generated": "Addresses Generated",
-        },
-        "user": {
-            "email": "Forwarding Email",
-        },
-    }
-    for section, section_data in data.items():
-        if section in mapping:
-            for key, value in section_data.items():
-                if key in mapping[section]:
-                    click.echo(f"{mapping[section][key]}: {value}")
+    click.echo(row_string_fmt("Duck Address", f"{config['user']}@duck.com", 20))
+    click.echo(row_string_fmt("Forwarding Address", data["user"]["email"], 20))
+    click.echo(
+        row_string_fmt("Addresses Generated", data["stats"]["addresses_generated"], 20)
+    )
 
 
 @cli.command()
 @click.argument("email")
 @click.pass_context
-def change_forwarding_email(ctx: click.Context, email, tries = 0):
+def change_forwarding_email(ctx: click.Context, email, tries=0):
     """Change forwarding email"""
     config = load_config()
     data = {"email": email, "disable_secure_reply": 0}
