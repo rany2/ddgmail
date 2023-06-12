@@ -121,14 +121,17 @@ def dashboard(ctx: click.Context, tries=0):
         BASE_URL + "email/dashboard",
         headers={"Authorization": f"Bearer {config['token']}"},
     )
-    if response.status_code == 401:
-        if tries < 3:
-            ctx.invoke(request_otp, username=config["user"])
-            ctx.invoke(login, username=config["user"], otp=None)
-            ctx.invoke(dashboard, tries=tries + 1)
-            return
-        raise click.ClickException("Retry threshold exceeded")
-    response.raise_for_status()
+    try:
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 401:
+            if tries < 3:
+                ctx.invoke(request_otp, username=config["user"])
+                ctx.invoke(login, username=config["user"], otp=None)
+                ctx.invoke(dashboard, tries=tries + 1)
+                return
+            raise click.ClickException("Retry threshold exceeded")
+        raise e
     data = response.json()
     click.echo(row_string_fmt("Duck Address", f"{config['user']}@duck.com", 20))
     click.echo(row_string_fmt("Forwarding Address", data["user"]["email"], 20))
@@ -149,14 +152,17 @@ def change_forwarding_email(ctx: click.Context, email, tries=0):
         headers={"Authorization": f"Bearer {config['token']}"},
         data=data,
     )
-    if response.status_code == 401:
-        if tries < 3:
-            ctx.invoke(request_otp, username=config["user"])
-            ctx.invoke(login, username=config["user"], otp=None)
-            ctx.invoke(change_forwarding_email, email=email, tries=tries + 1)
-            return
-        raise click.ClickException("Retry threshold exceeded")
-    response.raise_for_status()
+    try:
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 401:
+            if tries < 3:
+                ctx.invoke(request_otp, username=config["user"])
+                ctx.invoke(login, username=config["user"], otp=None)
+                ctx.invoke(change_forwarding_email, email=email, tries=tries + 1)
+                return
+            raise click.ClickException("Retry threshold exceeded")
+        raise e
     click.echo("Forwarding email changed")
 
 
