@@ -76,6 +76,8 @@ def login(ctx: click.Context, username, otp=None, tries=0):
     """Login to the account with OTP"""
     while not otp:
         otp = click.prompt("Enter the magic password", type=str)
+        # normalize otp
+        otp = " ".join(otp.lower().split())
 
     config = {}
     response = session.get(
