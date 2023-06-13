@@ -10,7 +10,7 @@ if parse_version(setuptools_version) < parse_version(min_setuptools_version):
 
 setup(
     name="ddgmail",
-    version="0.1.5",
+    version="0.1.6",
     py_modules=["ddgmail"],
     author="rany",
     author_email="ranygh@riseup.net",
@@ -18,6 +18,7 @@ setup(
     description="A command line tool to use DuckDuckGo's E-mail forwarding service",
     install_requires=[
         "Click",
+        "requests",
         f"setuptools>={min_setuptools_version}",
     ],
     entry_points={
